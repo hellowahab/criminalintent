@@ -1,10 +1,13 @@
 package com.bignerdranch.android.criminalintent;
 
+import android.content.ComponentCallbacks;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -25,7 +28,20 @@ public class CrimeListFragment extends Fragment {
     private RecyclerView mCrimeRecylerView;
     private CrimeAdapter mAdapter;
     private boolean mSubtitleVisible;
-private static final String SAVED_SUBTITLE_VISIBLE = "subtitle";
+    private Callbacks mCallbacks;
+
+    public interface Callbacks
+    {
+        void onCrimeSelected(Crime crime);
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        mCallbacks = (Callbacks)context;
+    }
+
+    private static final String SAVED_SUBTITLE_VISIBLE = "subtitle";
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -40,8 +56,6 @@ private static final String SAVED_SUBTITLE_VISIBLE = "subtitle";
         {
             mSubtitleVisible = savedInstanceState.getBoolean(SAVED_SUBTITLE_VISIBLE);
         }
-
-
 
         View view = inflater.inflate(R.layout.fragment_crime_list,container,false);
         mCrimeRecylerView = (RecyclerView) view.findViewById(R.id.crime_recycler_view);
@@ -62,7 +76,12 @@ private static final String SAVED_SUBTITLE_VISIBLE = "subtitle";
         super.onSaveInstanceState(outState);
         outState.putBoolean(SAVED_SUBTITLE_VISIBLE,mSubtitleVisible);
     }
-    // Start reading from 291
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mCallbacks = null;
+    }
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
@@ -89,8 +108,10 @@ private static final String SAVED_SUBTITLE_VISIBLE = "subtitle";
             case    R.id.new_crime:
                 Crime crime = new Crime();
                 CrimeLab.get(getActivity()).addCrime(crime);
-                Intent intent = CrimePagerActivity.newIntent(getActivity(),crime.getId());
-                startActivity(intent);
+                /*Intent intent = CrimePagerActivity.newIntent(getActivity(),crime.getId());
+                startActivity(intent);*/
+                updateUI();
+                mCallbacks.onCrimeSelected(crime);
                 return true;
             case R.id.show_subtitle:
                 mSubtitleVisible =!mSubtitleVisible;
@@ -119,7 +140,7 @@ private static final String SAVED_SUBTITLE_VISIBLE = "subtitle";
 
 
 
-    private void updateUI()
+    public void updateUI()
     {
         CrimeLab crimeLab = CrimeLab.get(getActivity());
         List<Crime> crimes = crimeLab.getCrimes();
@@ -131,6 +152,7 @@ private static final String SAVED_SUBTITLE_VISIBLE = "subtitle";
         }
         else
         {
+            mAdapter.setCrimes(crimes);
             mAdapter.notifyDataSetChanged();
         }
 
@@ -167,13 +189,23 @@ private static final String SAVED_SUBTITLE_VISIBLE = "subtitle";
 
         }
 
+        // Page 351
+
         @Override
         public void onClick(View view) {
             /*Toast.makeText(getActivity(),
                     mCrime.getTitle() + " Clicked!", Toast.LENGTH_SHORT)
                     .show();*/
-            Intent intent = CrimePagerActivity.newIntent(getActivity(),mCrime.getId());
-            startActivity(intent);
+            /*Intent intent = CrimePagerActivity.newIntent(getActivity(),mCrime.getId());
+            startActivity(intent);*/
+
+            /*Fragment fragment = CrimeFragment.newInstance(mCrime.getId());
+            FragmentManager fm = getActivity().getSupportFragmentManager();
+            fm.beginTransaction()
+                    .add(R.id.detail_fragment_container,fragment)
+                    .commit();*/
+
+            mCallbacks.onCrimeSelected(mCrime);
         }
 
 
@@ -205,6 +237,11 @@ private static final String SAVED_SUBTITLE_VISIBLE = "subtitle";
         @Override
         public int getItemCount() {
             return mCrimes.size();
+        }
+
+        public void setCrimes(List<Crime> crimes)
+        {
+            mCrimes = crimes;
         }
     }
 }
